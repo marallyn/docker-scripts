@@ -1,0 +1,33 @@
+#!/bin/bash
+
+# usage:
+#   composer sh
+#       opens bash with composer available
+#   composer <composer-command> [options]
+
+if [ "$1" = "sh" ]; then
+    # user wants to open the shell,
+    # shift the 'sh' off the positional parameters list
+    command=( "bash" "--rcfile" "/app/.bashrc" "-i" )
+    shift
+
+    # move our custom bashrc to tmp so we can modify it and use it in the container
+    cp ~/docker-scripts/bashrc /tmp/bashrc
+
+    # change the prompt so we know we are in the composer container
+    echo "PS1=\"\[\e[91m\][composer]\[\e[00m\] \w $ \"" >> /tmp/bashrc
+else
+    # user wants to run a composer command
+    command=( "composer" $@)
+fi
+
+docker run \
+    -i \
+    --rm \
+    -t \
+    -u `id -u`:`id -g` \
+    -v `pwd`:/app \
+    -v /tmp/bashrc:/app/.bashrc \
+    -w /app \
+    composer \
+    "${command[@]}"

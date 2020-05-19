@@ -1,0 +1,74 @@
+#!/bin/bash
+
+show_help() {
+    echo "
+    Opens a bash shell using a docker image with the specified php version and os flavor.
+
+    Usage:
+        phpcli [options]
+
+    Options:
+        -h                Display this help message.
+        -o <os flavor>    Specify the os flavor. Default=buster
+        -v <php version>  Specify the php version. Default=latest
+
+    Exceptions:
+        If -o alpine is specified, sh is used instead of bash
+        If -v latest is specified, -o is ignored
+"
+}
+
+# initialize variables
+os="buster"
+version="latest"
+while getopts ":cho:v:" opt; do
+    case "$opt" in
+        h )
+            show_help
+            exit 0;;
+        o )
+            os="$OPTARG";;
+        v )
+            version=$OPTARG;;
+        \? )
+            echo "Invalid option: $OPTARG"
+            exit 1;;
+        : )
+            echo "Invalid option: '-$OPTARG' requires an argument"
+            exit 1;;
+    esac
+done
+
+if [ "$version" = "latest" ]; then
+    # the latest tag does not have os options
+    image="php:$version"
+    os=""
+else
+    image="php:$version-$os"
+fi
+
+# create the command array
+if [ "$os" = "alpine" ]; then
+    command=( "sh" )
+else
+    command=( "bash" "--rcfile" "/app/.bashrc" "-i" )
+fi
+
+echo "executing ${command[@]} in $image ..."
+
+# move our custom bashrc to tmp so we can modify it and use it in the container
+cp ~/docker-scripts/bashrc /tmp/bashrc
+
+# change the prompt so we know what image we are using
+echo "PS1=\"\[\e[91m\][${image}]\[\e[00m\] \w $ \"" >> /tmp/bashrc
+
+docker run \
+    -i \
+    --rm \
+    -t \
+    -u `id -u`:`id -g` \
+    -v `pwd`:/app \
+    -v /tmp/bashrc:/app/.bashrc \
+    -w /app \
+    "$image" \
+    "${command[@]}"
