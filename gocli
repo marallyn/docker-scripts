@@ -6,4 +6,4 @@ set -e
 # import these open_cli
 source ~/docker-scripts/common.sh
 
-open_cli php latest buster $@
+open_cli golang latest buster $@
