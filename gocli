@@ -6,4 +6,34 @@ set -e
 # import these open_cli
 source ~/docker-scripts/common.sh
 
+# defines a slightly different docker_run
+# gloang needs a /.cache dir
+docker_run() {
+    # pull the args into variables
+    # we are shitfing them, because we want to access all of them, one at a time
+    wdir=$1;shift
+    image=$1;shift
+
+    command_arr=()
+
+    # the rest of the args make up the command to run in the docker image
+    while [ -n "$1" ]
+    do
+        command_arr+=($1)
+        shift
+    done
+
+    docker run \
+        -i \
+        --rm \
+        -t \
+        -u `id -u`:`id -g` \
+        -v "$(pwd)/cache":/.cache \
+        -v `pwd`:"/$wdir" \
+        -v /tmp/bashrc:"/$wdir/.bashrc" \
+        -w "/$wdir" \
+        "$image" \
+        "${command_arr[@]}"
+}
+
 open_cli golang latest buster $@
