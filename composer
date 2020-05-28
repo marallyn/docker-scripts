@@ -5,29 +5,29 @@
 #       opens bash with composer available
 #   composer <composer-command> [options]
 
-if [ "$1" = "sh" ]; then
-    # user wants to open the shell,
-    # shift the 'sh' off the positional parameters list
-    command=( "bash" "--rcfile" "/app/.bashrc" "-i" )
-    shift
+# catch and exit when functions exit with error
+set -e
 
-    # move our custom bashrc to tmp so we can modify it and use it in the container
-    cp ~/docker-scripts/bashrc /tmp/bashrc
+# import these open_cli
+source ~/docker-scripts/common.sh
 
-    # change the prompt so we know we are in the composer container
-    echo "PS1=\"\[\e[91m\][composer]\[\e[00m\] \w $ \"" >> /tmp/bashrc
-else
-    # user wants to run a composer command
-    command=( "composer" $@)
-fi
+# we save these for use in build_command
+first_arg=$1
+original_args=$@
 
-docker run \
-    -i \
-    --rm \
-    -t \
-    -u `id -u`:`id -g` \
-    -v `pwd`:/app \
-    -v /tmp/bashrc:/app/.bashrc \
-    -w /app \
-    composer \
-    "${command[@]}"
+build_command() {
+    wdir=$1
+    os=$2
+
+    # create the command array
+    if [ "$first_arg" = "sh" ]; then
+        command_arr=( "bash" "--rcfile" "/$wdir/.bashrc" "-i" )
+    else
+        # user wants to run a composer command
+        command_arr=( "composer" $original_args)
+    fi
+
+    echo ${command_arr[@]}
+}
+
+open_cli composer latest buster $@
